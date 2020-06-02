@@ -1,4 +1,4 @@
 fashion_mnist_model.h5
-
+__pycache__/
 # the output from the coverage command
 coverage/
