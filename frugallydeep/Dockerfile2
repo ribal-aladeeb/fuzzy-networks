@@ -1,0 +1,15 @@
+FROM verificarlo/verificarlo
+
+WORKDIR /workdir
+
+
+
+RUN apt-get update \
+    && apt-get install -y build-essential cmake vim 
+
+COPY install.sh install.sh
+COPY fdeep_model.json fdeep_model.json
+COPY predict.cpp predict.cpp
+
+CMD '/bin/bash'
+
