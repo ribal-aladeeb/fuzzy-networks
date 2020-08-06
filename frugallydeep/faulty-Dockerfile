@@ -1,6 +1,6 @@
 FROM verificarlo/verificarlo
 
-WORKDIR /workdir
+WORKDIR /build-workdir
 
 # install frugally-deep dependencies
 RUN apt-get update \
@@ -29,11 +29,13 @@ RUN apt-get update \
     && mkdir -p build && cd build \
     && cmake .. \
     && make && make install \
-    && cd ../.. 
+    && cd ../..
 
+# Hack to fix files created not comitted by docker
+WORKDIR /workdir 
 COPY fdeep_model.json fdeep_model.json
 COPY predict.cpp predict.cpp
-RUN verificarlo-c++ predict.cpp -o predict 
+RUN verificarlo-c++ predict.cpp -o predict
 
 CMD ["bash","-c", "VFC_BACKENDS='libinterflop_mca.so --precision-binary32 24 --precision-binary64 53 --mode=mca' ./predict"]
 
