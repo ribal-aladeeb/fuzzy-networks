@@ -1,7 +1,6 @@
 FROM verificarlo/verificarlo
 
-WORKDIR /workdir
-
+WORKDIR /new-workdir
 # install frugally-deep dependencies
 RUN apt-get update \
     && apt-get install -y build-essential cmake vim clang \
@@ -33,7 +32,7 @@ RUN apt-get update \
 
 COPY fdeep_model.json fdeep_model.json
 COPY predict.cpp predict.cpp
- 
+RUN verificarlo-c++ predict.cpp -o predict
 
-CMD ["bash","-c", "verificarlo-c++ predict.cpp -o predict && VFC_BACKENDS='libinterflop_mca.so --precision-binary32 24 --precision-binary64 53 --mode=mca' ./predict"]
+CMD ["bash","-c", "VFC_BACKENDS='libinterflop_mca.so --precision-binary32 24 --precision-binary64 53 --mode=mca' ./predict"]
 
