@@ -14,10 +14,10 @@ vector<float> readImageInColourOrder() {
     dataFile.read(&bucket, 1);
     float imageClass = (float)(uint8_t)bucket;
     std::cout <<"image class "<< imageClass << std::endl;
-    
+
     // seek the first pixel value
     dataFile.seekg(1);
-    
+
     char bytes[3072];
     dataFile.read(bytes, 3072);
 
@@ -38,27 +38,33 @@ vector<float> readImageInColourOrder() {
     return image;
 }
 
-// TODO
-// vector<float> readImageAlternateColours(){
-//     // red, green, blue pixel value of each pixel
-//     return null
-// }
 
-
-vector<float> generate1Dimage()
-{
-    vector<float> image(32 * 32 * 3);
-    for (int i = 0; i < image.size(); i++)
+vector<float> readImageAlternateColours() {
+    // return the image with red, green, blue pixel value of each pixel.
+    vector<float> image = readImageInColourOrder();
+    vector<float> newImage;
+    for (int i=0; i<3072;i++)
     {
-        image[i] = std::rand() % 255 / 255.0;
+        int offset; //red values need no offset
+        if (i % 3 == 0)
+            offset=0;
+        else if (i % 3 == 2) // green values come after red
+            offset = 1024;
+        else if (i % 3 == 2) // blue values come last
+            offset = 2048;
+
+        newImage.push_back(image[i+offset]);
     }
-    return image;
+    // After adding all pixels add the image class to end of vector
+    newImage.push_back(image[image.size()-1]);
+    
+    return newImage;
 }
 
 int main()
 {
-    vector<float> image = readImageInColourOrder();
-    float imageClass  = image[3073];
+    vector<float> image = readImageAlternateColours();
+    float imageClass  = image[3072];
     image.pop_back();
     cout << imageClass<<"__"<< image.size() <<std::endl;
 
