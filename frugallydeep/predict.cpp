@@ -103,6 +103,6 @@ int main()
 
     for (int i = 0; i < 10; i++)
     {
-        std::cout << probabilities[i] << std::endl;
+        std::cout << fixed << std::setprecision(29) << probabilities[i] << std::endl;
     }
 }
