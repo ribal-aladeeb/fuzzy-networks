@@ -31,8 +31,11 @@ RUN apt-get update \
     && cd ../.. 
 
 COPY fdeep_model.json fdeep_model.json
+COPY cifar-10-batches-bin/ cifar-10-batches-bin/
 COPY predict.cpp predict.cpp
 RUN verificarlo-c++ predict.cpp -o predict
+# RUN verificarlo-c++ --verbose predict.cpp -o predict
 
 CMD ["bash","-c", "VFC_BACKENDS='libinterflop_mca.so --precision-binary32 24 --precision-binary64 53 --mode=mca' ./predict"]
+#  CMD ["bash","-c", "VFC_BACKENDS='libinterflop_ieee.so --debug' ./predict"]
 
