@@ -7,9 +7,7 @@ compile:
 run: 
 	./forward
 
-buildrun: 
-	make compile
-	make run
+buildrun: compile run
 
 docker-build:
 	docker build . -t fuzzy-frugally
