@@ -2,7 +2,7 @@ read-od:
 	od -t u1 cifar-10-batches-bin/data_batch_1.bin | head
 
 compile:
-	g++ --std=c++14 predict.cpp -o forward
+	g++ --std=c++14 predict.cpp -o predict
 
 run: 
 	./forward
