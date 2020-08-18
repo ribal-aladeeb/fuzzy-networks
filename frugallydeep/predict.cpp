@@ -10,8 +10,14 @@ vector<float> readImageInColourOrder()
 
     string filename = "cifar-10-batches-bin/data_batch_1.bin";
     ifstream dataFile(filename, std::ifstream::binary);
+    if (not dataFile.is_open())
+    {
+        std::cerr << "data file is not open" << std::endl;
+        exit(1);
+    }
     char bucket;
     dataFile.read(&bucket, 1);
+
     float imageClass = (float)(uint8_t)bucket;
     std::cout << "image class " << imageClass << std::endl;
 
@@ -61,6 +67,38 @@ vector<float> readImageAlternateColours()
     return newImage;
 }
 
+vector<vector<float>> readAllImages(string &filename)
+{ // This func will read all images given in the filename
+    // in the same format as readImageAlternateColours
+    vector<vector<float>> images;
+
+    ifstream dataFile(filename, std::ifstream::binary);
+    if (not dataFile.is_open())
+    {
+        std::cerr << "data file '" << filename << "' is not open" << std::endl;
+        exit(1);
+    }
+    const int NUM_BYTES = 3073; // each file has 10k images, each image is 3073 bytes
+    char pixels[NUM_BYTES];
+
+    for (int i = 0; i < 10000; i++)
+    {
+        dataFile.read(pixels, NUM_BYTES);
+        float imageClass = (float)(uint8_t)pixels[0];
+        vector<float> image;
+        for (int j = 1; j < 1025; j++)
+        {
+            image.push_back((float)(uint8_t)pixels[j]);        // red value
+            image.push_back((float)(uint8_t)pixels[j + 1024]); // green value
+            image.push_back((float)(uint8_t)pixels[j + 2048]); // blue value
+        }
+
+        image.push_back(imageClass);
+        images.push_back(image);
+    }
+    return images;
+}
+
 vector<float> softmax(vector<float> rawPredictions)
 {
     vector<float> exponents;
@@ -82,7 +120,20 @@ vector<float> softmax(vector<float> rawPredictions)
     return softmaxed;
 }
 
-int main()
+int finalClassification(vector<float> probabilities)
+{ // This function takes as input the output of softmax
+    // it returns the index of the highest probability in the float vector
+    int indexMax = 0;
+    for (int i = 1; i < probabilities.size(); i++)
+    {
+        if (probabilities[indexMax] < probabilities[i])
+        {
+            indexMax = i;
+        }
+    }
+    return indexMax;
+}
+int firstImageClassification()
 {
     vector<float> image = readImageAlternateColours();
     float imageClass = image[3072];
@@ -103,6 +154,17 @@ int main()
 
     for (int i = 0; i < 10; i++)
     {
-        std::cout << fixed << std::setprecision(29) << probabilities[i] << std::endl;
+        std::cout << fixed << std::setprecision(8) << probabilities[i] << std::endl;
+    }
+    cout<<"image classified as "<< finalClassification(probabilities)<<std::endl;
+}
+
+int main()
+{
+    string fileName = "cifar-10-batches-bin/data_batch_1.bin";
+    vector<vector<float>> images = readAllImages(fileName);
+    for (int i = 0; i < 30; i++)
+    {
+       
     }
 }
