@@ -156,15 +156,41 @@ int firstImageClassification()
     {
         std::cout << fixed << std::setprecision(8) << probabilities[i] << std::endl;
     }
-    cout<<"image classified as "<< finalClassification(probabilities)<<std::endl;
+    cout << "image classified as " << finalClassification(probabilities) << std::endl;
 }
 
-int main()
+float calcAccuracy()
 {
     string fileName = "cifar-10-batches-bin/data_batch_1.bin";
     vector<vector<float>> images = readAllImages(fileName);
-    for (int i = 0; i < 30; i++)
+    int correctPredictions = 0;
+    float totalPredictions = images.size();
+    const auto model = fdeep::load_model("fdeep_model.json");
+
+    for (int i = 0; i < images.size(); i++)
     {
-       
+        vector<float> image = images.at(i);
+        int imageClass = (int)image.at(image.size() - 1); // the last index is where image class is stored
+        image.pop_back();                                 // because frugally only needs pixel values for predictions
+
+        cout << "Running prediction # " << i << std::endl;
+        fdeep::tensors result = model.predict({fdeep::tensor(
+            fdeep::tensor_shape(
+                static_cast<std::size_t>(32),
+                static_cast<std::size_t>(32),
+                static_cast<std::size_t>(3)),
+            image)});
+
+        int predictedClass = finalClassification(softmax(result.at(0).to_vector()));
+
+        if (predictedClass == imageClass)
+            correctPredictions += 1;
     }
+    cout << "number correct predictions " <<correctPredictions<< std::endl;
+    return correctPredictions / totalPredictions;
+}
+int main()
+{
+
+    cout << "The accuracy is " << calcAccuracy() << std::endl;
 }
