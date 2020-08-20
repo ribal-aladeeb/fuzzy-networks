@@ -1,6 +1,15 @@
 import tensorflow as tf
+import sys
 
-model = tf.keras.models.load_model("tf_cifar10.h5")
+try:
+    model_filename = sys.argv[1]
+except Exception as e:
+    print(e)
+    print("please provide a model filename to calculate test set accuracy")
+    exit()
+
+model = tf.keras.models.load_model(model_filename)
+
 
 (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.cifar10.load_data()
 
