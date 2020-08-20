@@ -89,9 +89,9 @@ vector<vector<float>> readAllImages(string &filename)
         // for (int j = 1; j < 3073; j++)
         for (int j = 1; j < 1025; j++)
         {
-            image.push_back((float)(uint8_t)pixels[j]/255.0);        // red value
-            image.push_back((float)(uint8_t)pixels[j + 1024]/255.0); // green value
-            image.push_back((float)(uint8_t)pixels[j + 2048]/255.0); // blue value
+            image.push_back((float)(uint8_t)pixels[j] / 255.0);        // red value
+            image.push_back((float)(uint8_t)pixels[j + 1024] / 255.0); // green value
+            image.push_back((float)(uint8_t)pixels[j + 2048] / 255.0); // blue value
             // image.push_back(((float)(uint8_t)(pixels[j])) / 255);
         }
 
@@ -105,10 +105,19 @@ vector<float> softmax(vector<float> rawPredictions)
 {
     vector<float> exponents;
     float sumExpo;
-
+    float maxRawPred;
     for (int i = 0; i < rawPredictions.size(); i++)
     {
-        exponents.push_back(exp(rawPredictions[i]));
+        if (maxRawPred < rawPredictions.at(i))
+        {
+            maxRawPred = rawPredictions.at(i);
+        }
+    }
+    vector<float> *x = &rawPredictions;
+    for (int i = 0; i < rawPredictions.size(); i++)
+    {
+        (*x).insert((*x).begin() + i, (*x)[i] - maxRawPred);
+        exponents.push_back(exp((*x)[i]));
         sumExpo += exponents[i];
     }
 
@@ -242,11 +251,10 @@ int displayRGBinRowMajorOrder()
             for (int z = 0; z < 3; z++)
             {
                 int tmp = (int)(t.get(fdeep::tensor_pos(y, x, z)) * 255);
-                cout << tmp <<" ";
+                cout << tmp << " ";
             }
-            cout<<std::endl;
+            cout << std::endl;
         }
     }
     // cout << fdeep::show_tensor(t) << std::endl;
 }
-
