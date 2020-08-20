@@ -105,19 +105,15 @@ vector<float> softmax(vector<float> rawPredictions)
 {
     vector<float> exponents;
     float sumExpo;
-    float maxRawPred;
-    for (int i = 0; i < rawPredictions.size(); i++)
+    float maxRawPred = rawPredictions.at(0);
+    for (int i = 1; i < rawPredictions.size(); i++)
     {
         if (maxRawPred < rawPredictions.at(i))
-        {
             maxRawPred = rawPredictions.at(i);
-        }
     }
-    vector<float> *x = &rawPredictions;
     for (int i = 0; i < rawPredictions.size(); i++)
     {
-        (*x).insert((*x).begin() + i, (*x)[i] - maxRawPred);
-        exponents.push_back(exp((*x)[i]));
+        exponents.push_back(exp(rawPredictions[i] - maxRawPred));
         sumExpo += exponents[i];
     }
 
