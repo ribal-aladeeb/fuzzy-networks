@@ -33,7 +33,7 @@ vector<float> readImageInColourOrder()
 
     for (int i = 0; i < 3072; i++)
     {
-        pixelValue = ((float)(uint8_t)bytes[i]) / 255;
+        pixelValue = ((float)(uint8_t)bytes[i]) / 255.0;
         image.push_back(pixelValue);
     }
 
@@ -86,11 +86,13 @@ vector<vector<float>> readAllImages(string &filename)
         dataFile.read(pixels, NUM_BYTES);
         float imageClass = (float)(uint8_t)pixels[0];
         vector<float> image;
+        // for (int j = 1; j < 3073; j++)
         for (int j = 1; j < 1025; j++)
         {
-            image.push_back((float)(uint8_t)pixels[j]);        // red value
-            image.push_back((float)(uint8_t)pixels[j + 1024]); // green value
-            image.push_back((float)(uint8_t)pixels[j + 2048]); // blue value
+            image.push_back((float)(uint8_t)pixels[j]/255.0);        // red value
+            image.push_back((float)(uint8_t)pixels[j + 1024]/255.0); // green value
+            image.push_back((float)(uint8_t)pixels[j + 2048]/255.0); // blue value
+            // image.push_back(((float)(uint8_t)(pixels[j])) / 255);
         }
 
         image.push_back(imageClass);
@@ -156,16 +158,16 @@ int firstImageClassification()
     {
         std::cout << fixed << std::setprecision(8) << probabilities[i] << std::endl;
     }
-    cout << "image classified as " << finalClassification(probabilities) << std::endl;
+    std::cout << "True image class " << imageClass << std::endl;
+    std::cout << "Image classified as " << finalClassification(probabilities) << std::endl;
 }
 
-float calcAccuracy()
+float calcAccuracy(string dataFile, string modelFile)
 {
-    string fileName = "cifar-10-batches-bin/data_batch_1.bin";
-    vector<vector<float>> images = readAllImages(fileName);
+    vector<vector<float>> images = readAllImages(dataFile);
     int correctPredictions = 0;
     float totalPredictions = images.size();
-    const auto model = fdeep::load_model("fdeep_model.json");
+    const auto model = fdeep::load_model(modelFile);
 
     for (int i = 0; i < images.size(); i++)
     {
@@ -173,7 +175,13 @@ float calcAccuracy()
         int imageClass = (int)image.at(image.size() - 1); // the last index is where image class is stored
         image.pop_back();                                 // because frugally only needs pixel values for predictions
 
-        cout << "Running prediction # " << i << std::endl;
+        // if (i == 0)
+        // {
+        //     std::cout << "Running all predictions currently" << std::endl;
+        // }
+        std::cout << "\r"
+                  << "Running prediction # " << i << std::flush;
+
         fdeep::tensors result = model.predict({fdeep::tensor(
             fdeep::tensor_shape(
                 static_cast<std::size_t>(32),
@@ -186,11 +194,59 @@ float calcAccuracy()
         if (predictedClass == imageClass)
             correctPredictions += 1;
     }
-    cout << "number correct predictions " <<correctPredictions<< std::endl;
+    std::cout << std::endl
+              << fixed << std::setprecision(16)
+              << "number correct predictions " << correctPredictions
+              << std::endl;
     return correctPredictions / totalPredictions;
 }
-int main()
-{
 
-    cout << "The accuracy is " << calcAccuracy() << std::endl;
+int main(int argc, char **argv)
+{
+    string dataFilename, modelFilename;
+    // bool verbose;
+    if (argc >= 3)
+    {
+        modelFilename = argv[1];
+        dataFilename = argv[2];
+        // verbose = argv[3] == "--verbose" ? true : false;
+        std::cout << "using model file " << modelFilename
+                  //  << ", verbose: " << verbose << endl
+                  << ", and data file " << dataFilename << endl;
+    }
+    else
+    {
+        dataFilename = "cifar-10-batches-bin/data_batch_1.bin";
+        modelFilename = "fdeep_model.json";
+    }
+    std::cout << fixed << std::setprecision(16) << calcAccuracy(dataFilename, modelFilename) << endl;
 }
+
+int displayRGBinRowMajorOrder()
+{
+    string dataFilename = "cifar-10-batches-bin/data_batch_1.bin";
+    vector<vector<float>> images = readAllImages(dataFilename);
+    vector<float> image = images.at(0);
+    image.pop_back();
+    fdeep::tensor t = {fdeep::tensor(
+        fdeep::tensor_shape(
+            static_cast<std::size_t>(32),
+            static_cast<std::size_t>(32),
+            static_cast<std::size_t>(3)),
+        image)};
+
+    for (int y = 0; y < 32; y++)
+    {
+        for (int x = 0; x < 32; x++)
+        {
+            for (int z = 0; z < 3; z++)
+            {
+                int tmp = (int)(t.get(fdeep::tensor_pos(y, x, z)) * 255);
+                cout << tmp <<" ";
+            }
+            cout<<std::endl;
+        }
+    }
+    // cout << fdeep::show_tensor(t) << std::endl;
+}
+
