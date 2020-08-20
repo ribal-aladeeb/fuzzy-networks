@@ -4,8 +4,11 @@ read-od:
 compile:
 	g++ --std=c++14 predict.cpp -o predict
 
+compile-optimized:
+	g++ --std=c++14 -O3 predict.cpp -o predict
+
 run: 
-	./forward
+	./predict
 
 buildrun: compile run
 
