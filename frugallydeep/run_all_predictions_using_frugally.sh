@@ -1,12 +1,18 @@
 #!/bin/bash
+# runs sequentially by default
+# to run predictions in parallel add argument 'parallel'
 
 touch prediction_output.txt
 
 for f in cifar-10-batches-bin/*.bin; do
-    ./predict models/fdeep_model_100_epochs.json $f 2>&1 | tee -a prediction_output.txt &
-    echo | tee -a prediction_output.txt
-    echo | tee -a prediction_output.txt
-    echo -e "**************************\n" | tee -a prediction_output.txt
+    if [ $1 = 'parallel' ]; then
+        ./predict models/fdeep_model_10_epochs.json $f &
+    else
+        ./predict models/fdeep_model_10_epochs.json $f
+    fi
+    echo
+    echo
+    echo -e "**************************\n"
 done
 
 exit 0
