@@ -3,6 +3,7 @@
 using namespace std;
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 vector<float> readImageInColourOrder()
 {
@@ -140,31 +141,14 @@ int finalClassification(vector<float> probabilities)
     }
     return indexMax;
 }
-int firstImageClassification()
+vector<float> computeProbabilities(vector<float> &image, const fdeep::model &model)
 {
-    vector<float> image = readImageAlternateColours();
-    float imageClass = image[3072];
-    image.pop_back();
+    fdeep::tensors result = model.predict(
+        {fdeep::tensor(fdeep::tensor_shape(32, 32, 3), image)});
 
-    const auto model = fdeep::load_model("fdeep_model.json");
+    vector<float> rawLogits = result.at(0).to_vector();
 
-    fdeep::tensors result = model.predict({fdeep::tensor(
-        fdeep::tensor_shape(
-            static_cast<std::size_t>(32),
-            static_cast<std::size_t>(32),
-            static_cast<std::size_t>(3)),
-        image)});
-
-    vector<float> t = result.at(0).to_vector();
-
-    vector<float> probabilities = softmax(t);
-
-    for (int i = 0; i < 10; i++)
-    {
-        std::cout << fixed << std::setprecision(8) << probabilities[i] << std::endl;
-    }
-    std::cout << "True image class " << imageClass << std::endl;
-    std::cout << "Image classified as " << finalClassification(probabilities) << std::endl;
+    return softmax(rawLogits);
 }
 
 float calcAccuracy(string dataFile, string modelFile)
@@ -184,8 +168,7 @@ float calcAccuracy(string dataFile, string modelFile)
         // {
         //     std::cout << "Running all predictions currently" << std::endl;
         // }
-        std::cout << "\r"
-                  << "Running prediction # " << i << std::flush;
+        std::cout << "\rRunning prediction # " << i << std::flush;
 
         fdeep::tensors result = model.predict({fdeep::tensor(
             fdeep::tensor_shape(
@@ -205,8 +188,7 @@ float calcAccuracy(string dataFile, string modelFile)
               << std::endl;
     return correctPredictions / totalPredictions;
 }
-
-int main(int argc, char **argv)
+void calcAccuracyDecorator(int argc, char **argv)
 {
     string dataFilename, modelFilename;
     // bool verbose;
@@ -252,5 +234,55 @@ int displayRGBinRowMajorOrder()
             cout << std::endl;
         }
     }
-    // cout << fdeep::show_tensor(t) << std::endl;
+    cout << fdeep::show_tensor(t) << std::endl;
+}
+
+vector<vector<int>> runMCA(/*string modelFilename, vector<float> image, int trials*/)
+{ // This function runs multiple inferences on the same image and uses MCA to
+    // find out the number of significant digits in the prediction.
+    string modelFilename = "models/mobilenetv2_100_epochs.json";
+    string testFile = "cifar-10-batches-bin/test_batch.bin";
+    int trials = 30;
+    vector<vector<float>> results;
+    vector<vector<float>> images = readAllImages(testFile);
+    vector<float> image = images.at(0);
+    image.pop_back();
+    fdeep::model model = fdeep::load_model(modelFilename);
+    float sums[10]; // because there are 10 classes to cifar10
+    for (int i = 0; i < trials; i++)
+    {
+        cout << "\rcomputing probabilities trial " << i << std::flush;
+        vector<float>
+            probs = computeProbabilities(image, model);
+        for (int classes = 0; classes < probs.size(); classes++)
+        {
+            sums[classes] += probs[classes];
+        }
+        results.push_back(probs);
+    }
+    float means[10];
+    float sigmas[10];
+    int sigfigs[10];
+    cout << std::endl;
+    for (int i = 0; i < 10; i++)
+    {
+        means[i] = sums[i] / trials;
+        float SumOfxMinusMeansSquared;
+        cout << "computing means and sigmas for class " << i << std::endl;
+        for (int j = 0; j < trials; j++)
+        {
+            SumOfxMinusMeansSquared += pow(results.at(j).at(i) - means[i], 2);
+        }
+        sigmas[i] = sqrt(SumOfxMinusMeansSquared / trials);
+        sigfigs[i] = -log10(sigmas[i] / means[i] + 1e-16);
+        cout << "For class " << i
+             << " mean: " << means[i]
+             << " standard dev: " << sigmas[i]
+             << " significant figures: " << sigfigs[i] << "\n";
+    }
+}
+
+int main(int argc, char **argv)
+{
+    runMCA();
 }
