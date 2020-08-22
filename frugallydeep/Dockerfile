@@ -30,7 +30,7 @@ RUN apt-get update \
     && make && make install \
     && cd ../.. 
 
-COPY fdeep_model.json fdeep_model.json
+COPY models/ models/
 COPY cifar-10-batches-bin/ cifar-10-batches-bin/
 COPY predict.cpp predict.cpp
 RUN verificarlo-c++ predict.cpp -o predict
