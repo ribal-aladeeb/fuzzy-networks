@@ -4,6 +4,7 @@ using namespace std;
 #include <fstream>
 #include <iostream>
 #include <cmath>
+#include <ctime>
 
 vector<float> readImageInColourOrder()
 {
@@ -237,21 +238,15 @@ int displayRGBinRowMajorOrder()
     cout << fdeep::show_tensor(t) << std::endl;
 }
 
-vector<vector<int>> runMCA(/*string modelFilename, vector<float> image, int trials*/)
+int *runMCASingleImage(fdeep::model &model, vector<float> image, int trials)
 { // This function runs multiple inferences on the same image and uses MCA to
     // find out the number of significant digits in the prediction.
-    string modelFilename = "models/mobilenetv2_100_epochs.json";
-    string testFile = "cifar-10-batches-bin/test_batch.bin";
-    int trials = 30;
     vector<vector<float>> results;
-    vector<vector<float>> images = readAllImages(testFile);
-    vector<float> image = images.at(0);
-    image.pop_back();
-    fdeep::model model = fdeep::load_model(modelFilename);
+
     float sums[10]; // because there are 10 classes to cifar10
     for (int i = 0; i < trials; i++)
     {
-        cout << "\rcomputing probabilities trial " << i << std::flush;
+        cout << "\r\tcomputing probabilities trial " << i << std::flush;
         vector<float>
             probs = computeProbabilities(image, model);
         for (int classes = 0; classes < probs.size(); classes++)
@@ -268,21 +263,42 @@ vector<vector<int>> runMCA(/*string modelFilename, vector<float> image, int tria
     {
         means[i] = sums[i] / trials;
         float SumOfxMinusMeansSquared;
-        cout << "computing means and sigmas for class " << i << std::endl;
+        // cout << "computing means and sigmas for class " << i << std::endl;
         for (int j = 0; j < trials; j++)
         {
             SumOfxMinusMeansSquared += pow(results.at(j).at(i) - means[i], 2);
         }
         sigmas[i] = sqrt(SumOfxMinusMeansSquared / trials);
-        sigfigs[i] = -log10(sigmas[i] / means[i] + 1e-16);
-        cout << "For class " << i
+        sigfigs[i] = -log10(sigmas[i] / abs(means[i]) + 1e-16);
+        cout << "\t\tFor class " << i
              << " mean: " << means[i]
              << " standard dev: " << sigmas[i]
              << " significant figures: " << sigfigs[i] << "\n";
+    }
+    return sigfigs;
+}
+
+void MCAexperiment(int trials = 30, int numImages = 5)
+{
+    string testFile = "cifar-10-batches-bin/test_batch.bin";
+    string modelFilename = "models/fdeep_model_10_epochs.json";
+    vector<vector<float>> images = readAllImages(testFile);
+    fdeep::model model = fdeep::load_model(modelFilename);
+    int sample_size = 5;
+    int randIndices[sample_size];
+    srand((unsigned)time(0));
+    for (int i = 0; i < sample_size; i++)
+    {
+        randIndices[i] = rand() % 10000;
+        vector<float> targetImage = images.at(randIndices[i]);
+        targetImage.pop_back();
+        cout << "Running Experiment on image index " << randIndices[i]
+             << " from the test set\n";
+        runMCASingleImage(model, targetImage, trials);
     }
 }
 
 int main(int argc, char **argv)
 {
-    runMCA();
+    MCAexperiment();
 }
