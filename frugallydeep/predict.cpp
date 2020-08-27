@@ -69,7 +69,7 @@ vector<float> readImageAlternateColours()
     return newImage;
 }
 
-vector<vector<float>> readAllImages(string &filename)
+vector<vector<float>> readAllImages(string filename = "cifar-10-batches-bin/data_batch_1.bin")
 { // This func will read all images given in the filename
     // in the same format as readImageAlternateColours
     vector<vector<float>> images;
@@ -152,12 +152,13 @@ vector<float> computeProbabilities(vector<float> &image, const fdeep::model &mod
     return softmax(rawLogits);
 }
 
-float calcAccuracy(string dataFile, string modelFile)
+float calcAccuracy(string dataFile = "cifar-10-batches-bin/data_batch_1.bin",
+                   string modelFile = "models/fdeep_model_100_epochs.json")
 {
     vector<vector<float>> images = readAllImages(dataFile);
     int correctPredictions = 0;
     float totalPredictions = images.size();
-    const auto model = fdeep::load_model(modelFile);
+    const auto model = fdeep::load_model(modelFile, false); // false to prevent fdeep sanity test (the test fails with MCA)
 
     for (int i = 0; i < images.size(); i++)
     {
@@ -201,13 +202,12 @@ void calcAccuracyDecorator(int argc, char **argv)
         std::cout << "using model file " << modelFilename
                   //  << ", verbose: " << verbose << endl
                   << ", and data file " << dataFilename << endl;
+        std::cout << fixed << std::setprecision(16) << calcAccuracy(dataFilename, modelFilename) << endl;
     }
     else
     {
-        dataFilename = "cifar-10-batches-bin/data_batch_1.bin";
-        modelFilename = "fdeep_model.json";
+        std::cout << fixed << std::setprecision(16) << calcAccuracy() << endl;
     }
-    std::cout << fixed << std::setprecision(16) << calcAccuracy(dataFilename, modelFilename) << endl;
 }
 
 int displayRGBinRowMajorOrder()
@@ -277,22 +277,46 @@ int *runMCASingleImage(fdeep::model &model, vector<float> image, int trials)
     }
     return sigfigs;
 }
-
-void MCAexperiment(int trials = 30, int numImages = 5)
+vector<int> find10images(vector<vector<float>> images)
 {
-    string testFile = "cifar-10-batches-bin/test_batch.bin";
-    string modelFilename = "models/fdeep_model_10_epochs.json";
-    vector<vector<float>> images = readAllImages(testFile);
-    fdeep::model model = fdeep::load_model(modelFilename);
-    int sample_size = 5;
-    int randIndices[sample_size];
-    srand((unsigned)time(0));
-    for (int i = 0; i < sample_size; i++)
+    // this function returns the indices of the first image of each class. There
+    // are 10 classes so 10 indices are returned.
+
+    vector<int> indices(10, 0);
+    bool seenThisClass[10] = {false};
+
+    //because you already have image 0 at index 0, mark the first image's class as seen
+    seenThisClass[(int)images.at(0).at(3072)] = true;
+
+    for (int i = 1, j = 1; j < 10; i++)
     {
-        randIndices[i] = rand() % 10000;
-        vector<float> targetImage = images.at(randIndices[i]);
+        int imageClass = images.at(i).at(3072);
+        if (seenThisClass[imageClass] == false)
+        {
+            indices[j] = i;
+            seenThisClass[imageClass] = true;
+            j += 1;
+        }
+    }
+
+    return indices;
+}
+
+void MCAexperiment(int trials = 30,
+                   int numImages = 5,
+                   string testFile = "cifar-10-batches-bin/test_batch.bin",
+                   string modelFilename = "models/mobilenetv2_15_epochs.json")
+{
+    vector<vector<float>> images = readAllImages(testFile);
+    vector<int> indices = find10images(images);
+    fdeep::model model = fdeep::load_model(modelFilename, false);
+    for (int i = 0; i < indices.size() && i < 5; i++)
+    {
+        vector<float> targetImage = images.at(indices[i]);
+        float imageClass = targetImage.at(3072);
         targetImage.pop_back();
-        cout << "Running Experiment on image index " << randIndices[i]
+        cout << "Running Experiment on image index " << indices[i]
+             << " of class " << imageClass
              << " from the test set\n";
         runMCASingleImage(model, targetImage, trials);
     }
