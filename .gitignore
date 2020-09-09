@@ -16,3 +16,7 @@ __pycache__
 results
 .ipynb_checkpoints
 sbatch-output.txt
+
+# for the report
+!report.tex
+report.*
