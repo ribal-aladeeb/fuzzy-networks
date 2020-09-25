@@ -1,0 +1,83 @@
+\documentclass[a4paper,12pt]{article}
+\begin{document}
+\title{Stability of Deep Neural Networks}
+\author{Antoine Hebert, Ribal Aladeeb, Tristan Glatard, Yohan Chatelain}
+\maketitle
+\section{Introduction}
+
+In the last decade, Deep Learning has proven to be one of the most
+powerful techniques for solving machine learning problems both in academia
+and industry. However Deep Learning is not immune to the reproducibility
+problems encountered in the scientific community. For this reason we are
+interested in evaluating how numerically stable neural networks are. We
+mainly focus on two basic classification use cases of neural networks: MNIST
+and CIFAR10. Our aim is to run Monte Carlo (MCA) Simulations during the inference
+phase on networks trained for solving the aforementioned use cases. In this
+way we approximate the number of signifigant digits in the output
+predictions.
+
+\section{Methods}
+
+To perform MCA experiments we use Verificarlo, a tool for performing
+automatic Monte Carlo Arithmetic on any C, C++, or Fortran source code.
+Because it is an extension to the LLVM compiler, it's advantages are many
+fold. Namely, it is very fast, it completely abstracts the complexity of
+numerical analysis from the target code of the instrumentation, and is fairly
+easy to plug into a user's existing program. Given that NumPy, PyTorch and
+FrugallyDeep are all implemented in C++, Verificarlo allowed us to
+instrument those frameworks and run predictions using MCA.
+
+\subsection{NumPy}
+To evaluate the stability of networks using NumPy, we reimplemented a neural
+network data structure that offers an interface for flexible network
+architecture descriptions (similar to TensorFlow and PyTorch). For now, our
+implementation offers Dense and Convolutional layers only but it can certainly
+be extended to offer a wider range of layers. 
+\paragraph{}
+For MNIST, we trained a network containing a single hidden fully-connected layer
+which achieved 97.74\% accuracy. Then, we ran $n$ MCA trials on a subset of the
+test set, because doing so on the totality of the set (10000 images) was not
+feasible given our resources. As per [refer to verificarlo paper] one can
+approximate the number of significant digits in base 10 of a computation with
+the following formula $-{log_{10}(\frac{\sigma}{|\mu|})}$, where $\sigma$ is the
+standard deviation and $\mu$ is the mean of the distribution over $n$ trials.
+Furthermore, Verificarlo allows one to run MCA trials with specified precision,
+i.e the number of bits retained in the mantissa. With full precision, 53 bit
+mantissa for IEEE 754-2008 (binary64), running 20 MCA trials on the first 100
+test images resulted in an average of 14 significant figures base 10 whereas 45
+bit precision gives on average 11 sigfigs$_{10}$.
+\paragraph{}
+For CIFAR10, we trained a simple CNN composed solely of three convolutional
+layers and one flatten layer. This simple architecture could not come close to
+state-of-the-art accuracies (50-60\% vs. 97\%). However, by performing 40 trials
+with binary64 precision of 53 we found that the predicted outputs averaged 13
+sigfigs$_{10}$. With a reduced precision of 45 bits instead of 53, the network
+still outputed an average of 11 significant figures base 10.
+
+\subsection{FrugallyDeep}
+In application, scientists and engineers alike rarely use a custom
+implementation of neural networks to solve their problems. Instead they rely on
+robust frameworks like TensorFlow and PyTorch. However, even if these frameworks
+are built in C++ instrumenting them with Verificarlo is no trivial task. So it
+is difficult to test the stability of networks implemented in these frameworks.
+This is where FrugallyDeep comes in. It is a very lightweight headers-only C++
+library designed to allow users to run predictions on TensorFlow models without
+needing to have TensorFlow as their project's dependencies. Frugally translates
+the .h5 model format into a custom JSON structure that can then perform those
+predictions. This library can be trivially instrumented with Verificarlo. So
+far, we can run MCA on TensorFlow models but our results aren't to be trusted
+yet. Without further investigation, we can't be sure that the stability or
+lackthereof is a cause of FrugallyDeep's implementation or whether it is
+intrinsic to the network's themselves.
+\subsection{PyTorch}
+
+\section{Results and Future work}
+So far, our results suggest that the networks implemented in this study seem to
+be stable. This might be due to the simplicity of the use cases studied and we
+can't assume that the same would hold for different use cases or achitectures.
+It would be useful to replicate the PyTorch work for TensorFlow to allow for the
+testing of many more use cases without needing to reinvent the wheel in our own
+NumPy implementation. Both in NumPy and FrugallyDeep, training and inference was
+done on CPUs. It would be useful to see how those results change if we use GPUs
+instead.
+\end{document}
