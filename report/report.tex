@@ -69,7 +69,27 @@ far, we can run MCA on TensorFlow models but our results aren't to be trusted
 yet. Without further investigation, we can't be sure that the stability or
 lackthereof is a cause of FrugallyDeep's implementation or whether it is
 intrinsic to the network's themselves.
+
 \subsection{PyTorch}
+
+Despite, the difficulty of instrumenting a large and complex software like
+PyTorch and TensorFlow, we decide to attempt still to instrument one of them:
+PyTorch. Indeed, we think that it is crucial to verify that our results are
+reproducible with the tools used by most deep learning practitioners. Instead of
+instrumenting the whole source code, we instrumented specific functions
+responsible for the computation of selected neural network layers. We only
+instrumented the linear and convolutional layers for now. PyTorch relies on
+different backends to perform computations, some of which use GPUs. The current
+version of Verificarlo does not support instrumenting GPU code, so we disabled
+the use of GPUs in PyTorch. By default, PyTorch relies on external libraries such
+as the Intel Math Kernel Library, OpenBLAS, oneDNN, or XNNPACK, to efficiently
+perform matrix multiplications and convolutions. These external libraries are not
+easy to instrument with Verificarlo. They usually use assembly code, which cannot be
+instrumented, and sometimes include several implementations for different CPU
+architectures. Luckily PyTorch also provides fallback implementations in plain C. We
+forced PyTorch to use these implementations and instrumented the corresponding
+functions. Early results using our instrumented version of PyTorch are on par with
+what we obtained with other methods, but more experiments should be done.
 
 \section{Results and Future work}
 So far, our results suggest that the networks implemented in this study seem to
